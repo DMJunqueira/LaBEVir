@@ -3,21 +3,22 @@
 ## Type: Sequence
 ## Author: Dennis Maletich Junqueira
 ## Date: 2025-08-27
-## Description:
+##
+## DESCRIPTION:
 ## This script aligns user-provided sequences to a reference genome of moderate length,
 ## identifies the corresponding gene for each sequence, and adds this
 ## information to a metadata file. It also generates specific
 ## sub-alignments for each gene found (output: *_alignments.fasta)
-## Observation:
-##
-## RUNNING IN TERMINAL
+## 
+## USAGE: terminal
+## Rscript annotate_sequences.R --meta my_metadata.csv --aln my_seqs.fasta --ref_seq reference_genome.fasta --annot aanotation.csv --meta_out annotated_metadata.txt
 ## --meta = metadata file (.csv). It should contain column "Accession".
 ## --aln = sequence alignment (.fasta). Sequence names should start with "Accession_".
 ## --ref_seq = reference sequence (.fasta).
 ## --annot = reference sequence annotation (.csv). It should contain columns: gene_name,start,end
 ## --meta_out = newly annotated metadata (.txt) with columns gene_aligned and sequence_length
 ## 
-## Rscript annotate_sequences.R --meta meus_metadados.csv --aln minhas_sequencias.fasta --ref_seq referencia_genoma.fasta --annot anotacoes_genes.csv --meta_out metadados_anotados.txt
+## 
 #################################################################
 
 # LOADING LIBRARIES
