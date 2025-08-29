@@ -17,8 +17,6 @@
 ## --ref_seq = reference sequence (.fasta).
 ## --annot = reference sequence annotation (.csv). It should contain columns: gene_name,start,end
 ## --meta_out = newly annotated metadata (.txt) with columns gene_aligned and sequence_length
-## 
-## 
 #################################################################
 
 # LOADING LIBRARIES
