@@ -8,7 +8,8 @@
 ## This script aligns user-provided sequences to a reference genome of moderate length,
 ## identifies the corresponding gene for each sequence, and adds this
 ## information to a metadata file. It also generates specific
-## sub-alignments for each gene found (output: *_alignments.fasta)
+## sub-alignments for each gene found (output: *_alignments.fasta). Additionally, 
+## it can eliminate sequences shorter than a specified lenght.
 ## 
 ## USAGE: terminal
 ## Rscript annotate_sequences.R --meta my_metadata.csv --aln my_seqs.fasta --ref_seq reference_genome.fasta --annot aanotation.csv --meta_out annotated_metadata.txt
