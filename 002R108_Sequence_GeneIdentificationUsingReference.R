@@ -65,7 +65,9 @@ all_gene_alignments <- list()
 # Loop through each user sequence
 for (i in 1:length(user_sequences)) {
   seq_name <- names(user_sequences)[i]
-  accession_id <- gsub("\\_.*", "", seq_name)
+  
+  # Use sequence complete name as ID
+  accession_id <- seq_name
   
   # Align the user sequence to the reference
   alignment <- pairwiseAlignment(user_sequences[i], ref_sequence, type = "global")
@@ -80,7 +82,7 @@ for (i in 1:length(user_sequences)) {
     gene_start <- gene_annotations[j, "start"]
     gene_end <- gene_annotations[j, "end"]
     
-    # Calculate overlap
+    # Calculate overlap between the user sequence alignment and the gene annotation
     overlap_start <- max(aligned_start, gene_start)
     overlap_end <- min(aligned_end, gene_end)
     current_overlap <- max(0, overlap_end - overlap_start + 1)
@@ -89,17 +91,21 @@ for (i in 1:length(user_sequences)) {
     if (current_overlap > 0) {
       matching_genes <- c(matching_genes, gene_name)
       
-      # Extract the reference gene sequence
-      sub_ref_seq <- subseq(ref_sequence[[1]], start = gene_start, end = gene_end)
+      # The start and end positions of the gene, relative to the aligned subject sequence
+      ref_aln_start <- start(subject(alignment))
       
-      # Perform a new local alignment of the user sequence to the gene
-      sub_alignment <- pairwiseAlignment(user_sequences[i], sub_ref_seq, type = "local")
+      # Calculate the start and end positions of the overlapping region within the aligned pattern sequence
+      sub_aln_start <- overlap_start - ref_aln_start + 1
+      sub_aln_end <- overlap_end - ref_aln_start + 1
       
-      # Prepare the alignment output as a BStringSet
-      sub_aln_output <- BStringSet(toString(aligned(pattern(sub_alignment))))
+      # Slice the aligned pattern (user) sequence
+      sub_seq_in_gene <- subseq(aligned(pattern(alignment)), start = sub_aln_start, end = sub_aln_end)
+      
+      # Create a new BStringSet with the aligned user sequence
+      sub_aln_output <- BStringSet(toString(sub_seq_in_gene))
       
       # Create proper names for the output sequences
-      names(sub_aln_output) <- paste0(accession_id, "_", gene_name)
+      names(sub_aln_output) <- accession_id
       
       # Add the alignment to the list, grouped by gene name
       if (is.null(all_gene_alignments[[gene_name]])) {
@@ -131,19 +137,22 @@ write_delim(meta, opt$meta_out, delim = '\t', quote = 'none')
 # Write all gene alignments to separate FASTA files
 for (gene_name in names(all_gene_alignments)) {
   
-  # Obter as posições do gene na anotação
+  # Obtain gene posittions from the annotation
   gene_info <- gene_annotations[gene_annotations$gene_name == gene_name, ]
   gene_start <- gene_info$start
   gene_end <- gene_info$end
   
-  # Extrair a sequência de referência do gene e convertê-la para BStringSet
+  # Extract the reference sequence e convert it to a BStringSet
   gene_ref_seq <- BStringSet(subseq(ref_sequence[[1]], start = gene_start, end = gene_end))
   names(gene_ref_seq) <- paste0("REF_", gene_name)
   
-  # Adicionar a sequência de referência (apenas uma vez) à lista de alinhamentos do gene
+  # Add reference sequence (only once) to the list of sequences of that gene
   final_alignments <- c(gene_ref_seq, all_gene_alignments[[gene_name]])
   
-  # Salvar o arquivo FASTA
+  # Save fasta file
   output_file_name <- paste0(gene_name, "_alignments.fasta")
   writeXStringSet(final_alignments, file = output_file_name)
 }
+
+# Message to inform the user that the script has finished
+print("Script finished successfully. All files have been processed.")
