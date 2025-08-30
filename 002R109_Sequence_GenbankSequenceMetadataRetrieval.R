@@ -73,7 +73,7 @@ if (!dir.exists(output_dir)) {
 
 # Define output files
 fasta_output_path <- file.path(output_dir, "sequences.fasta")
-metadata_output_path <- file.path(output_dir, "metadata.csv")
+metadata_output_path <- file.path(output_dir, "metadata.tsv")
 
 # Execute functions
 tryCatch({
@@ -118,7 +118,7 @@ tryCatch({
   }
   
   if (nrow(metadata_df) > 0) {
-    write_csv(metadata_df, metadata_output_path)
+    write_tsv(metadata_df, metadata_output_path)
     cat(paste("Metadata saved to:", metadata_output_path, "\n"))
   } else {
     cat("No metadata could be extracted.\n")
@@ -135,3 +135,4 @@ tryCatch({
 #
 # a) Gene identification using a reference sequence: https://github.com/DMJunqueira/LaBEVir/blob/main/002R108_Sequence_GeneIdentificationUsingReference.R
 # b) Changing sequence names:
+
