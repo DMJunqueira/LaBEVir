@@ -16,6 +16,7 @@
 ## --aln = sequence alignment (.fasta). Sequence names should start with "Accession_".
 ## --ref_seq = reference sequence (.fasta).
 ## --annot = reference sequence annotation (.csv). It should contain columns: gene_name,start,end
+## --len_min = minimum sequence length relative to the gene reference (e.75)
 ## --meta_out = newly annotated metadata (.txt) with columns gene_aligned and sequence_length
 #################################################################
 
@@ -38,7 +39,9 @@ option_list = list(
   make_option(c("-o", "--meta_out"), type="character", default=NULL,
               help="metadata output file path", metavar="character"),
   make_option(c("-g", "--annot"), type="character", default=NULL,
-              help="gene annotation file path (e.g., TSV or CSV)", metavar="character")
+              help="gene annotation file path (e.g., TSV or CSV)", metavar="character"),
+  make_option(c("-l", "--len_min"), type="double", default=0,
+              help="minimum sequence length relative to the reference gene length", metavar="double")
 );
 
 opt_parser = OptionParser(option_list=option_list)
@@ -50,24 +53,34 @@ if (!requireNamespace("Biostrings", quietly = TRUE)) {
 }
 
 # Read files
-meta <- read.csv(opt$meta)
+# AQUI ESTÁ A CORREÇÃO: Usar read_delim com o delimitador correto
+meta <- read_delim(opt$meta, delim = "\t", quote = "")
 user_sequences <- readBStringSet(opt$aln)
 ref_sequence <- readBStringSet(opt$ref_seq)
-gene_annotations <- read.csv(opt$annot)
+gene_annotations <- read.csv(opt$annot) # Mantendo a leitura do gene como CSV
 
 # Create new columns for the results
 meta$gene_aligned <- NA
 meta$sequence_length <- NA
+meta$filtered_status <- "Removed" # Inicia com "Removido" e muda se a sequencia passar no filtro
 
 # Create a list to store alignments for each gene
 all_gene_alignments <- list()
+accession_statuses <- data.frame(Accession = character(),
+                                 Gene = character(),
+                                 Status = character(),
+                                 stringsAsFactors = FALSE)
 
 # Loop through each user sequence
 for (i in 1:length(user_sequences)) {
   seq_name <- names(user_sequences)[i]
   
-  # Use sequence complete name as ID
-  accession_id <- seq_name
+  # Nova logica para extrair o accession_id
+  # Remove tudo depois do primeiro espaco ou o ultimo '_' para lidar com diferentes formatos
+  accession_id <- sub(" .*", "", seq_name)
+  if (grepl("_", accession_id) && !grepl("NC_", accession_id)) {
+    accession_id <- sub("_.*", "", accession_id)
+  }
   
   # Align the user sequence to the reference
   alignment <- pairwiseAlignment(user_sequences[i], ref_sequence, type = "global")
@@ -137,22 +150,49 @@ write_delim(meta, opt$meta_out, delim = '\t', quote = 'none')
 # Write all gene alignments to separate FASTA files
 for (gene_name in names(all_gene_alignments)) {
   
-  # Obtain gene posittions from the annotation
+  # Obter as posições do gene na anotação
   gene_info <- gene_annotations[gene_annotations$gene_name == gene_name, ]
   gene_start <- gene_info$start
   gene_end <- gene_info$end
+  gene_length <- gene_end - gene_start + 1
   
-  # Extract the reference sequence e convert it to a BStringSet
+  # Extrair a sequência de referência do gene e convertê-la para BStringSet
   gene_ref_seq <- BStringSet(subseq(ref_sequence[[1]], start = gene_start, end = gene_end))
   names(gene_ref_seq) <- paste0("REF_", gene_name)
   
-  # Add reference sequence (only once) to the list of sequences of that gene
-  final_alignments <- c(gene_ref_seq, all_gene_alignments[[gene_name]])
+  # FASE DE FILTRAGEM
+  filtered_alignments <- BStringSet()
+  for (i in 1:length(all_gene_alignments[[gene_name]])) {
+    seq_to_filter <- all_gene_alignments[[gene_name]][i]
+    accession_id <- names(seq_to_filter)
+    
+    # Contar apenas os nucleotídeos (A, T, C, G)
+    nucleotide_length <- sum(letterFrequency(seq_to_filter, "ATCG"))
+    
+    # Calcular a porcentagem do tamanho em relação ao gene de referência
+    length_ratio <- nucleotide_length / gene_length
+    
+    if (nucleotide_length > 0 && length_ratio >= opt$len_min) {
+      filtered_alignments <- c(filtered_alignments, seq_to_filter)
+      
+      # Updating filtering status in the metadata file
+      meta_row <- which(meta$Accession == accession_id)
+      if (length(meta_row) > 0) {
+        meta$filtered_status[meta_row] <- "Kept"
+      }
+    }
+  }
   
-  # Save fasta file
+  # Adding the reference sequence (only once) to the filtered sequences
+  final_alignments <- c(gene_ref_seq, filtered_alignments)
+  
+  # Saving fasta file
   output_file_name <- paste0(gene_name, "_alignments.fasta")
   writeXStringSet(final_alignments, file = output_file_name)
 }
+
+# Write processed metadata file
+write_delim(meta, opt$meta_out, delim = '\t', quote = 'none')
 
 # Message to inform the user that the script has finished
 print("Script finished successfully. All files have been processed.")
