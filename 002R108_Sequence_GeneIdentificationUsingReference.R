@@ -19,7 +19,7 @@
 ## --meta_out = newly annotated metadata (.txt) with columns gene_aligned and sequence_length
 #################################################################
 
-# LOADING LIBRARIES
+# Loading libraries
 rm(list=ls())
 library(dplyr)
 library(Biostrings)
