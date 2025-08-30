@@ -20,7 +20,6 @@ library(rentrez)
 library(stringr)
 library(readr)
 library(dplyr)
-library(seqinr)
 
 # Function 1: search GenBank and get IDs
 #' Search GenBank for a term and return a list of sequence IDs.
@@ -41,28 +40,10 @@ search_and_fetch_ids <- function(db, term, retmax) {
   return(search_results$ids)
 }
 
-# Function 2: fetch sequences and save as FASTA
-#' Fetch sequences for a list of IDs and save them to a FASTA file.
-#'
-#' @param db The database (e.g., 'nuccore').
-#' @param ids A vector of sequence IDs.
-#' @param file_path The path to the output FASTA file.
-#' @return A character vector of sequences.
-fetch_sequences <- function(db, ids, file_path) {
-  cat("Fetching sequences in FASTA format...\n")
-  fasta_data <- entrez_fetch(db = db, id = ids, rettype = "fasta")
-  
-  # A função write_file do pacote readr é ideal para salvar texto
-  write_file(fasta_data, file = file_path)
-  cat(paste("Sequences saved to:", file_path, "\n"))
-  
-  return(fasta_data)
-}
-
 # Main execution
 # Define search criteria
 search_term <- "western equine encephalitis virus[organism]"
-max_results <- 201 # number of hits to be searched
+max_results <- 10000 # number of hits to be searched
 
 # Define output folder
 output_dir <- "./"
@@ -80,42 +61,50 @@ tryCatch({
   # Step 1: Search for IDs
   sequence_ids <- search_and_fetch_ids(db = "nuccore", term = search_term, retmax = max_results)
   
-  # Step 2: searching and saving sequences
-  fetch_sequences(db = "nuccore", ids = sequence_ids, file_path = fasta_output_path)
+  # Step 2: Fetching and saving sequences in FASTA format
+  cat("Fetching sequences in FASTA format...\n")
+  fasta_data <- entrez_fetch(db = "nuccore", id = sequence_ids, rettype = "fasta")
+  
+  # Naming sequences with the accession number
+  fasta_lines <- str_split(fasta_data, "\n")[[1]]
+  cleaned_fasta_lines <- if_else(
+    str_detect(fasta_lines, "^>"),
+    gsub("^>([^ ]+).*", ">\\1", fasta_lines),
+    fasta_lines
+  )
+  cleaned_fasta_data <- paste(cleaned_fasta_lines, collapse = "\n")
+  write_file(cleaned_fasta_data, file = fasta_output_path)
+  cat(paste("Sequences saved to:", fasta_output_path, "\n"))
   
   # Step 3: searching and saving metadata
   cat("Fetching and parsing metadata...\n")
   
-  # Using `entrez_summary` to obtain data in a list structure
+  # Usando `entrez_summary` para obter dados em uma estrutura de lista
   metadata_summary <- entrez_summary(db = "nuccore", id = sequence_ids)
   
-  # Creating an empty dataframe
-  metadata_df <- data.frame(
-    accession = character(),
-    title = character(),
-    organism = character(),
-    stringsAsFactors = FALSE
-  )
+  # Creating a dataframe
+  metadata_list <- list()
   
-  # Iterate results and extracting metadata
-  for (record in metadata_summary) {
-    # Extracting accesion and title
-    accession <- if (!is.null(record$uid)) record$uid else NA
-    title <- if (!is.null(record$title)) record$title else NA
+  # Iterate over the results and extract metadata
+  for (i in 1:length(metadata_summary)) {
+    record <- metadata_summary[[i]]
     
-    # Extracting organism
+    # Extracting accession, title and organism
+    accession <- if (!is.null(record$accession)) record$accession else NA
+    title <- if (!is.null(record$title)) record$title else NA
     organism <- str_extract(title, "^[^,]+")
     
-    # New row
-    new_row <- data.frame(
+    # Adding metadata to a temporary list
+    metadata_list[[i]] <- data.frame(
       accession = accession,
       title = title,
       organism = organism,
       stringsAsFactors = FALSE
     )
-    
-    metadata_df <- bind_rows(metadata_df, new_row)
   }
+  
+  # Combining all metadata in a unique dataframe
+  metadata_df <- bind_rows(metadata_list)
   
   if (nrow(metadata_df) > 0) {
     write_tsv(metadata_df, metadata_output_path)
@@ -124,15 +113,9 @@ tryCatch({
     cat("No metadata could be extracted.\n")
   }
   
-  cat("\nScript finalizado com sucesso.\n")
+  cat("\nScript completed successfully.\n")
   
 }, error = function(e) {
-  cat("\nOcorreu um erro:\n")
+  cat("\nError:\n")
   cat(e$message, "\n")
 })
-
-# Next steps:
-#
-# a) Gene identification using a reference sequence: https://github.com/DMJunqueira/LaBEVir/blob/main/002R108_Sequence_GeneIdentificationUsingReference.R
-# b) Changing sequence names:
-
