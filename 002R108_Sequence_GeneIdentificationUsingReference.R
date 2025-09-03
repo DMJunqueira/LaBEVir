@@ -2,6 +2,7 @@
 ## GENE IDENTIFICATION USING A REFERENCE SEQUENCE
 ## Type: Sequence
 ## Author: Dennis Maletich Junqueira
+## AI Disclosure: Gemini generated the first draft
 ## Date: 2025-08-27
 ##
 ## DESCRIPTION:
