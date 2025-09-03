@@ -20,3 +20,6 @@ for each gene found (output: *_alignments.fasta). Additionally, it can eliminate
 ### 002R109_Sequence_GenbankSequenceMetadataRetrieval:
 This script programmatically searches the NCBI Nucleotide database for sequences based on a user-provided term. It retrieves full sequence 
 data and key metadata (e.g., accession, organism, country, and host) and saves the results into a FASTA file and a CSV file.
+
+### 002R110_Sequence_NCBIVirusSequenceMetadataRetrieval:
+Fetch NCBI Virus sequences using flexible queries. Supports taxid, virus name, serotype, host, country, collection dates, molecule type, etc.
