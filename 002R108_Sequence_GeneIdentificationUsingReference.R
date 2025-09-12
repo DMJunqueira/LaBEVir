@@ -55,16 +55,15 @@ if (!requireNamespace("Biostrings", quietly = TRUE)) {
 }
 
 # Read files
-# AQUI ESTÁ A CORREÇÃO: Usar read_delim com o delimitador correto
 meta <- read_delim(opt$meta, delim = "\t", quote = "")
 user_sequences <- readBStringSet(opt$aln)
 ref_sequence <- readBStringSet(opt$ref_seq)
-gene_annotations <- read.csv(opt$annot) # Mantendo a leitura do gene como CSV
+gene_annotations <- read.csv(opt$annot)
 
 # Create new columns for the results
 meta$gene_aligned <- NA
 meta$sequence_length <- NA
-meta$filtered_status <- "Removed" # Inicia com "Removido" e muda se a sequencia passar no filtro
+meta$filtered_status <- "Removed"
 
 # Create a list to store alignments for each gene
 all_gene_alignments <- list()
@@ -77,8 +76,8 @@ accession_statuses <- data.frame(Accession = character(),
 for (i in 1:length(user_sequences)) {
   seq_name <- names(user_sequences)[i]
   
-  # Nova logica para extrair o accession_id
-  # Remove tudo depois do primeiro espaco ou o ultimo '_' para lidar com diferentes formatos
+  # Extracting the accession ID
+  # Trim everything after the first space or last "_"
   accession_id <- sub(" .*", "", seq_name)
   if (grepl("_", accession_id) && !grepl("NC_", accession_id)) {
     accession_id <- sub("_.*", "", accession_id)
