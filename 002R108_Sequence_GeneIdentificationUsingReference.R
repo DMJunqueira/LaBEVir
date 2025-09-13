@@ -1,7 +1,7 @@
 #################################################################
 ## GENE IDENTIFICATION USING A REFERENCE SEQUENCE
 ## Type: Sequence
-## Author: Dennis Maletich Junqueira
+## Author: Dennis Maletich Junqueira, Tiago Azevedo Pereira
 ## AI Disclosure: Gemini generated the first draft
 ## Date: 2025-08-27
 ##
@@ -11,15 +11,16 @@
 ## information to a metadata file. It also generates specific
 ## sub-alignments for each gene found (output: *_alignments.fasta). Additionally, 
 ## it can eliminate sequences shorter than a specified lenght.
+## This script needs Biostrings 3.15 and R 4.2.x.
 ## 
-## USAGE: terminal
-## Rscript annotate_sequences.R --meta my_metadata.csv --aln my_seqs.fasta --ref_seq reference_genome.fasta --annot aanotation.csv --meta_out annotated_metadata.txt
-## --meta = metadata file (.csv). It should contain column "Accession".
-## --aln = sequence alignment (.fasta). Sequence names should start with "Accession_".
-## --ref_seq = reference sequence (.fasta).
-## --annot = reference sequence annotation (.csv). It should contain columns: gene_name,start,end
-## --len_min = minimum sequence length relative to the gene reference (e.75)
-## --meta_out = newly annotated metadata (.txt) with columns gene_aligned and sequence_length
+## RUNNING IN TERMINAL:
+## Rscript 002R108_Sequence_GeneIdentificationUsingReference.R --meta my_metadata.csv --aln my_seqs.fasta --ref_seq reference_genome.fasta --annot aanotation.csv --len_min 0 --meta_out annotated_metadata.txt
+## --meta = metadata file (.csv). It should contain column "Accession" with the accession ID that is part of the sequence name (example: EPI.ISL.1827381);
+## --aln = sequence alignment (.fasta). Sequence names should start with "Accession_" (example: EPI.ISL.1827381_BRAZIL.AC_2023.084). The "Accession" in the metadata file is the extraction of what comes before the "_";
+## --ref_seq = reference sequence (.fasta) with all the sequences named following the pattern "Accession_another_information";
+## --annot = reference sequence annotation (.tsv). It should contain columns: gene_name,start,end;
+## --len_min = minimum sequence length relative to the gene reference (e.75);
+## --meta_out = newly annotated metadata (.txt) with columns gene_aligned and sequence_length.
 #################################################################
 
 # Loading libraries
@@ -55,10 +56,10 @@ if (!requireNamespace("Biostrings", quietly = TRUE)) {
 }
 
 # Read files
-meta <- read_delim(opt$meta, delim = "\t", quote = "")
+meta <- read_delim(opt$meta, delim = ";", quote = "")
 user_sequences <- readBStringSet(opt$aln)
 ref_sequence <- readBStringSet(opt$ref_seq)
-gene_annotations <- read.csv(opt$annot)
+gene_annotations <- read_delim(opt$annot, delim = "\t", quote = "")
 
 # Create new columns for the results
 meta$gene_aligned <- NA
@@ -78,10 +79,7 @@ for (i in 1:length(user_sequences)) {
   
   # Extracting the accession ID
   # Trim everything after the first space or last "_"
-  accession_id <- sub(" .*", "", seq_name)
-  if (grepl("_", accession_id) && !grepl("NC_", accession_id)) {
-    accession_id <- sub("_.*", "", accession_id)
-  }
+  accession_id <- sub("_", "", seq_name)
   
   # Align the user sequence to the reference
   alignment <- pairwiseAlignment(user_sequences[i], ref_sequence, type = "global")
@@ -92,9 +90,9 @@ for (i in 1:length(user_sequences)) {
   matching_genes <- c()
   
   for (j in 1:nrow(gene_annotations)) {
-    gene_name <- gene_annotations[j, "gene_name"]
-    gene_start <- gene_annotations[j, "start"]
-    gene_end <- gene_annotations[j, "end"]
+    gene_name <- gene_annotations[[j, "gene_name"]]
+    gene_start <- gene_annotations$start[[j]]
+    gene_end <- gene_annotations$end[[j]]
     
     # Calculate overlap between the user sequence alignment and the gene annotation
     overlap_start <- max(aligned_start, gene_start)
@@ -153,8 +151,8 @@ for (gene_name in names(all_gene_alignments)) {
   
   # Obter as posições do gene na anotação
   gene_info <- gene_annotations[gene_annotations$gene_name == gene_name, ]
-  gene_start <- gene_info$start
-  gene_end <- gene_info$end
+  gene_start <- gene_info$start[[1]]
+  gene_end <- gene_info$end[[1]]
   gene_length <- gene_end - gene_start + 1
   
   # Extrair a sequência de referência do gene e convertê-la para BStringSet
