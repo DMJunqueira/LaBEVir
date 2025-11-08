@@ -9,11 +9,12 @@
 
 
 
+
+### 002R013_Sequences_CountingNucleotidesGapsAndAmbiguities
+This script identifies the number of the IUPAC nucleotide and ambiguities for each given sequence in a fasta file. Additionally, it counts the number of "-".
+
 ### 002R037_Sequence_RenamingSequencesFasta
 This script renames sequences in a FASTA file based on a provided mapping table in a CSV format.
-
-### 002R057_Sequences_CountingNucleotidesGapsAndAmbiguities
-This script identifies the number of the IUPAC nucleotide and ambiguities for each given sequence in a fasta file. Additionally, it counts the number of "-".
 
 ### 002R108_Sequence_GeneIdentificationUsingReferenceGenome: 
 This script aligns user-provided sequences to a reference genome of moderate length, 
